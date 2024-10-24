@@ -8,26 +8,21 @@ async function handleLogin(req, res) {
     // Check if the user exists in the database
     const user = await User.findOne({ email });
     if (!user) {
-      req.flash('error_msg', 'No email found');
-      return res.redirect('/login');
+      return res.status(401).json({ message: 'No user found with this email' });
     }
 
     // Compare the provided password with the hashed password stored in the database
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      req.flash('error_msg', 'Password is incorrect');
-      return res.redirect('/login');
+      return res.status(401).json({ message: 'Incorrect password' });
     }
 
-    // If login is successful, set session variables or JWT tokens as per your authentication strategy
+    // Successful login logic
     req.session.userId = user._id; // Store user id in session
-    req.flash('success_msg', 'Login successful!');
-    res.redirect('/dashboard'); // Redirect to dashboard or any authenticated route
-
+    return res.status(200).json({ message: 'Login successful!', userId: user._id });
   } catch (error) {
     console.error('Error during user login:', error);
-    req.flash('error_msg', 'Error during login. Please try again.');
-    res.redirect('/login'); // Redirect back to login page on error
+    return res.status(500).json({ message: 'Error during login. Please try again.' });
   }
 }
 
