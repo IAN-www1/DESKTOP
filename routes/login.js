@@ -4,11 +4,8 @@ const { handleLogin } = require('../controllers/loginController'); // Adjust the
 
 // Route to serve login page
 router.get('/login', (req, res) => {
-    // Check if the user is already logged in
-    if (req.session.userId) {
-        return res.redirect('/dashboard'); // Redirect to dashboard if already logged in
-    }
-    res.render('login'); // Render login page if not logged in
+    // Always render the login page, regardless of login state
+    res.render('login');
 });
 
 // Handle login form submission
