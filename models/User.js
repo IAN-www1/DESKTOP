@@ -1,33 +1,45 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs'); // Use bcryptjs for compatibility
+const express = require('express');
+const User = require('../models/User');
+const bcrypt = require('bcryptjs'); // Import bcryptjs for hashing and comparing passwords
+const router = express.Router();
+const authMiddleware = require('../middleware/auth'); // Import the auth middleware
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-}, { timestamps: true });
-
-// Pre-save hook to hash password
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next(); // Only hash if the password is modified
-  const salt = await bcrypt.genSalt(10); // Generate a salt
-  this.password = await bcrypt.hash(this.password, salt); // Hash the password
-  next();
+// Render the login form
+router.get('/login', authMiddleware, (req, res) => {
+    res.render('login'); // Ensure you have a login.ejs view
 });
 
-// Method to compare passwords
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password); // Compare plain text password with hashed password
-};
+// Handle login
+router.post('/login', async (req, res) => {
+    const { username, password } = req.body; // Extract username and password from the request body
 
-module.exports = mongoose.model('User', userSchema);
+    try {
+        // Find employee by username
+        const employee = await User.findOne({ username });
+        
+        // Check if employee exists
+        if (!employee) {
+            req.flash('error_msg', 'Invalid username or password');
+            return res.redirect('/login');
+        }
+
+        // Compare the entered password with the stored hashed password
+        const match = await bcrypt.compare(password, employee.password);
+        if (!match) {
+            req.flash('error_msg', 'Invalid username or password');
+            return res.redirect('/login');
+        }
+
+        // Successful login: Store employee information in the session
+        req.session.User = User._id; // Store employee ID in the session
+        req.flash('success_msg', 'Login successful!');
+        res.redirect('/menu'); // Adjust the redirect path as necessary
+    } catch (error) {
+        console.error('Error during employee login:', error);
+        req.flash('error_msg', 'Error logging in, please try again.');
+        res.redirect('/login');
+    }
+});
+
+// Export the router
+module.exports = router;
