@@ -1,5 +1,5 @@
 const express = require('express');
-const Employee = require('../models/Employee'); // Ensure this path is correct
+const User = require('../models/User');
 const bcrypt = require('bcryptjs'); // Import bcryptjs for hashing and comparing passwords
 const router = express.Router();
 const authMiddleware = require('../middleware/auth'); // Import the auth middleware
@@ -15,7 +15,7 @@ router.post('/login', async (req, res) => {
 
     try {
         // Find employee by username
-        const employee = await Employee.findOne({ username });
+        const employee = await User.findOne({ username });
         
         // Check if employee exists
         if (!employee) {
@@ -31,7 +31,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Successful login: Store employee information in the session
-        req.session.employeeId = employee._id; // Store employee ID in the session
+        req.session.User = User._id; // Store employee ID in the session
         req.flash('success_msg', 'Login successful!');
         res.redirect('/menu'); // Adjust the redirect path as necessary
     } catch (error) {
