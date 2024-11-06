@@ -1,41 +1,45 @@
 const express = require('express');
+const Employee = require('../models/Employee'); // Ensure this path is correct
+const bcrypt = require('bcryptjs'); // Import bcryptjs for hashing and comparing passwords
 const router = express.Router();
-const { handleLogin } = require('../controllers/loginController'); // Adjust the path as necessary
+const authMiddleware = require('../middleware/auth'); // Import the auth middleware
 
-// Route to serve login page
-router.get('/login', (req, res) => {
-    // Always render the login page, regardless of login state
-    res.render('login');
+// Render the login form
+router.get('/login', authMiddleware, (req, res) => {
+    res.render('login'); // Ensure you have a login.ejs view
 });
 
-// Handle login form submission
-router.post('/login', handleLogin);
-// Handle login form submission
+// Handle login
 router.post('/login', async (req, res) => {
-  console.log('Login request body:', req.body); // Log the incoming request body
+    const { username, password } = req.body; // Extract username and password from the request body
 
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) {
-      console.log('No user found with this email');
-      return res.status(401).json({ message: 'No user found' });
+    try {
+        // Find employee by username
+        const employee = await Employee.findOne({ username });
+        
+        // Check if employee exists
+        if (!employee) {
+            req.flash('error_msg', 'Invalid username or password');
+            return res.redirect('/login');
+        }
+
+        // Compare the entered password with the stored hashed password
+        const match = await bcrypt.compare(password, employee.password);
+        if (!match) {
+            req.flash('error_msg', 'Invalid username or password');
+            return res.redirect('/login');
+        }
+
+        // Successful login: Store employee information in the session
+        req.session.employeeId = employee._id; // Store employee ID in the session
+        req.flash('success_msg', 'Login successful!');
+        res.redirect('/menu'); // Adjust the redirect path as necessary
+    } catch (error) {
+        console.error('Error during employee login:', error);
+        req.flash('error_msg', 'Error logging in, please try again.');
+        res.redirect('/login');
     }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      console.log('Incorrect password');
-      return res.status(401).json({ message: 'Incorrect password' });
-    }
-
-    // If login is successful, set session variables or JWT tokens
-    req.session.userId = user._id; // Store user id in session
-    console.log('Login successful for user:', user.email);
-    res.status(200).json({ message: 'Login successful', userId: user._id }); // Send success response
-
-  } catch (error) {
-    console.error('Error during login:', error);
-    return res.status(500).json({ message: 'Server error' });
-  }
 });
+
+// Export the router
 module.exports = router;
